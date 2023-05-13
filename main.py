@@ -6,8 +6,8 @@ from io import BytesIO
 from xlsxwriter import Workbook
 import toml
 
-config = toml.load(".streamlit\config.toml")
-st.set_page_config(**config.get("page_config", {}))
+#config = toml.load(".streamlit\config.toml")
+#st.set_page_config(**config.get("page_config", {}))
 
 
 def titulo(texto, fonte='Sigmar'):
