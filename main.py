@@ -70,7 +70,6 @@ if consulta_button:
         
         cnpjs = [x for x in list(cnpj_dataframe.iloc[:, 0]) if len(x) == 14]  
         
-        st.info(cnpjs)
         st.text(' ')
         st.text(' ')
         st.text(' ')
