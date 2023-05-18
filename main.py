@@ -55,12 +55,12 @@ def download_excel(df):
     return processed_data
 
 
-titulo('CONSULTA')
+titulo('CONSULTA CNPJ')
 st.text(' ')
 st.text(' ')
 uploader_cnpj_file = st.file_uploader("Arquivo Excel", type=["xls", "xlsx"])
 
-consulta_button = st.button('CONSULTAR CNPJS')
+consulta_button = st.button('CONSULTAR')
 
 if consulta_button:
 
