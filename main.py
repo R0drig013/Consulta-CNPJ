@@ -5,6 +5,7 @@ import openpyxl
 from io import BytesIO
 from xlsxwriter import Workbook
 import toml
+from time import sleep
 
 #config = toml.load(".streamlit\config.toml")
 #st.set_page_config(**config.get("page_config", {}))
@@ -13,10 +14,8 @@ import toml
 def titulo(texto, fonte='Sigmar'):
     st.write(f'<link href="https://fonts.googleapis.com/css?family={fonte}" rel="stylesheet">', unsafe_allow_html=True)
 
-    # Baixar a fonte
     st.write(f'<style>@import url("https://fonts.googleapis.com/css2?family={fonte}&display=swap");</style>', unsafe_allow_html=True)
 
-    # Centralizar o texto e alterar a fonte
     st.write(f"""
     <div style='display:flex; justify-content:center; align-items:center; font-family:"{fonte}", cursive;'>
         <h1>{texto}</h1>
@@ -47,48 +46,84 @@ def consulta_cnpj(cnpj):
     return response.json()
 
 
-titulo('CONSULTA CNPJ')
+def download_excel(df):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    writer.save()
+    processed_data = output.getvalue()
+    return processed_data
+
+
+titulo('CONSULTA')
 st.text(' ')
 st.text(' ')
-cnpj = st.text_input('CNPJ')
+uploader_cnpj_file = st.file_uploader("Arquivo Excel", type=["xls", "xlsx"])
 
-if len(cnpj) != 14:
-    st.info('Insira um CNPJ válido.')
-else:
-    dados_cnpj = consulta_cnpj(cnpj)
+consulta_button = st.button('CONSULTAR CNPJS')
 
-    dic_dados = {'Empresa': dados_cnpj['fantasia'],
-                'CNPJ': dados_cnpj['cnpj'],
-                'Nome': dados_cnpj['nome'],
-                'Documento': limpa_doc_in_name(dados_cnpj['nome']),
-                'Email': dados_cnpj['email'],
-                'Cep': dados_cnpj['cep'],
-                'Estado': dados_cnpj['uf'],
-                'Endereço': f'{dados_cnpj["bairro"]} - {dados_cnpj["logradouro"]} - {dados_cnpj["numero"]}' ,
-                'Cidade': dados_cnpj['municipio'],
-                'situação': dados_cnpj['situacao']}
+if consulta_button:
 
-    df_cnpj = pd.DataFrame(dic_dados, index=[0])
+    dados_to_consulta = []
+    if uploader_cnpj_file is not None:
+        cnpj_dataframe = pd.read_excel(uploader_cnpj_file, dtype=str)
+        
+        cnpjs = [x for x in list(cnpj_dataframe.iloc[:, 0]) if len(x) == 14]  
+        
+        st.info(cnpjs)
+        st.text(' ')
+        st.text(' ')
+        st.text(' ')
+        st.write('---')
+        barra_progress = st.progress(0, text='Consultando CNPJ')
+        for index, cnpj_text in enumerate(cnpjs):
+            dados_cnpj = consulta_cnpj(cnpj_text)
 
-    # Adicione um botão para baixar o arquivo Excel
-    def download_excel(df):
-        output = BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
-        writer.save()
-        processed_data = output.getvalue()
-        return processed_data
+            sleep(22)
+            dados_to_consulta.append([dados_cnpj['fantasia'], 
+                                      dados_cnpj['cnpj'], 
+                                      dados_cnpj['nome'], 
+                                      limpa_doc_in_name(dados_cnpj['nome']),
+                                      dados_cnpj['email'],
+                                      dados_cnpj['cep'],
+                                      dados_cnpj['uf'],
+                                      dados_cnpj["bairro"],
+                                      dados_cnpj["logradouro"],
+                                      dados_cnpj["numero"],
+                                      dados_cnpj['municipio'],
+                                      dados_cnpj['situacao']])
+            
+           
+            barra_progress.progress((index + 1)  / len(cnpjs), text='Consultando CNPJ')
+        barra_progress.progress((index + 1)  / len(cnpjs), text='Consulta Finalizada.')
 
+        dic_dados_for_df = {'Empresa': [x[0] for x in dados_to_consulta],
+                'CNPJ': [x[1] for x in dados_to_consulta],
+                'Nome': [x[2] for x in dados_to_consulta],
+                'Documento': [x[3] for x in dados_to_consulta],
+                'Email': [x[4] for x in dados_to_consulta],
+                'Cep': [x[5] for x in dados_to_consulta],
+                'Estado': [x[6] for x in dados_to_consulta],
+                'Bairro': [x[7] for x in dados_to_consulta],
+                'Rua': [x[8] for x in dados_to_consulta],
+                'Número': [x[9] for x in dados_to_consulta],
+                'Cidade': [x[10] for x in dados_to_consulta],
+                'Situação': [x[11] for x in dados_to_consulta]}
+        
+        df_cnpj = pd.DataFrame(dic_dados_for_df)
+
+        # Adicione um botão para baixar o arquivo Excel
+               
+        processed_data = download_excel(df_cnpj)
+        st.download_button(
+            label="Baixar arquivo Excel",
+            data=processed_data,
+            file_name="consultaCNPJ.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    else:
+        st.error('Você não inseriu um arquivo excel.')
     
-    processed_data = download_excel(df_cnpj)
-    st.download_button(
-        label="Baixar arquivo Excel",
-        data=processed_data,
-        file_name="consultaCNPJ.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    # Exiba o DataFrame
-    st.table(df_cnpj)
 
                     
